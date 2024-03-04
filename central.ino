@@ -21,7 +21,7 @@ const char* deviceServiceCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a0
 
 int gesture = -1;
 int oldGestureValue = -1;   
-//int cumMyo[100];
+int cumMyo[20] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 int motorCommand = -1;
 
 
@@ -157,8 +157,26 @@ int gestureDetectection() {
 
 
 int simMyo(){
-  int currentMyo = random(240);
-  if (currentMyo >= 220){
+  //int sensorValue = analogRead(A0);
+  int sensorValue = random(1024);
+  // delay(100);
+  delay(10);
+
+  // queue 
+  for (int i = 0; i<19; i++){
+    cumMyo[i] = cumMyo[i+1];
+  }
+  cumMyo[19] = sensorValue;
+
+  int sumMyo = 0;
+  for (int i = 0; i<20; i++){
+    sumMyo += cumMyo[i];
+    //Serial.println(cumMyo[i]);
+  }
+
+  
+  //if (sensorValue >= 900){
+  if (sumMyo >= 12000){
     //cumMyo += 1；
     motorCommand = 1;
   }
@@ -178,5 +196,8 @@ int simMyo(){
     
   return motorCommand;
 
-
 }
+
+
+
+

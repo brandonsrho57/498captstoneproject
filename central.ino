@@ -16,11 +16,36 @@
 #include <ArduinoBLE.h>
 #include <Arduino_APDS9960.h>
 
+#include "filter_lib.h"
+
+
+
+lowpass_filter lowpassFilter(60);  //set the cuttoff frequency for the filter 
+
+float raw_signal;
+float filtered_signal;
+//int servo1pos = 0;
+
+enum StatesServo {
+  OPEN,
+  MIDDLE,
+  CLOSED
+};
+
+// Set the initial (i.e., starting) state
+StatesServo state = StatesServo::OPEN;
+
+void nextStateServo() { 
+  if (state == StatesServo::OPEN) state = StatesServo::MIDDLE;
+  else if (state == StatesServo::MIDDLE) state = StatesServo::CLOSED;
+  else state = StatesServo::OPEN;
+}
+
 const char* deviceServiceUuid = "19b10000-e8f2-537e-4f6c-d104768a0618";
 const char* deviceServiceCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a0618";
 
 int gesture = -1;
-int oldGestureValue = -1;   
+int oldGestureValue = -2;   
 int cumMyo[20] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 int motorCommand = -1;
 
@@ -45,6 +70,8 @@ void setup() {
 
   Serial.println("Arduino Nano 33 BLE Sense (Central Device)");
   Serial.println(" ");
+
+  
 
   //memset(cumMyo,0,sizeof(cumMyo));
 }
@@ -115,7 +142,9 @@ void controlPeripheral(BLEDevice peripheral) {
   
   while (peripheral.connected()) {
     //gesture = gestureDetectection();
-    motorCommand = simMyo();
+    //motorCommand = simMyo();
+    findState();
+    getMotorCommand();
 
     if (oldGestureValue != motorCommand) {  
       oldGestureValue = motorCommand;
@@ -154,6 +183,9 @@ int gestureDetectection() {
     }
     return gesture;
 }
+
+
+
 
 
 int simMyo(){
@@ -196,6 +228,30 @@ int simMyo(){
     
   return motorCommand;
 
+}
+
+void findState(){
+  int raw_signal = analogRead(A0);
+
+  float t = micros() / 1e6;
+  Serial.println(raw_signal);
+  filtered_signal = lowpassFilter.filter(raw_signal);
+  int pixelColor = map(filtered_signal, 0, 1023, 0, 255); // need algorithm to determin hue from this
+  Serial.println(filtered_signal);
+  
+  //filtered_signal > 500
+  if (filtered_signal > 200){
+    //int startTime = millis();
+    //if (filtered_signal > 500 && (millis - startTime  >  2000));
+    nextStateServo();
+    }
+  delay(200);
+}
+
+void getMotorCommand(){
+  if (state == StatesServo::OPEN) motorCommand = 1;
+  else if (state == StatesServo::MIDDLE) motorCommand = 0;
+  else motorCommand = -1;
 }
 
 

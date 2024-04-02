@@ -1,4 +1,11 @@
 #include <ArduinoBLE.h>
+
+#include <Servo.h>
+#define PIN        6
+
+Servo servo1;
+
+//StatesServo state = StatesServo::OPEN;
       
 enum {
   GESTURE_NONE  = -1,
@@ -13,6 +20,7 @@ const char* deviceServiceCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a0
 
 int curMyo = -1;
 int onOffState = 0;
+int motorcommand = -1; 
 
 BLEService wingService(deviceServiceUuid); 
 BLEByteCharacteristic wingCharacteristic(deviceServiceCharacteristicUuid, BLERead | BLEWrite);
@@ -47,6 +55,9 @@ void setup() {
 
   Serial.println("Nano 33 BLE (Peripheral Device)");
   Serial.println(" ");
+
+ 
+  servo1.attach(9);
 }
 
 void loop() {
@@ -62,12 +73,29 @@ void loop() {
 
     while (central.connected()) {
       if (wingCharacteristic.written()) {
-         curMyo = wingCharacteristic.value();
-         writeMotor(curMyo);
+         //curMyo = wingCharacteristic.value();
+         motorcommand = wingCharacteristic.value();
+         //writeMotor(curMyo);
+         motoraction(motorcommand);
        }
     }
     
     Serial.println("* Disconnected to central device!");
+  }
+}
+
+void motoraction(int command){
+  // State-aware actions
+  switch(command) {
+    case 1:
+      servo1.write(5);
+      break;
+    case 0:
+      servo1.write(90);
+      break;
+    case -1:
+      servo1.write(175);
+      break;
   }
 }
 
